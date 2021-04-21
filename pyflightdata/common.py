@@ -86,11 +86,9 @@ class ProcessorMixin(object):
                 'Origin': 'https://www.flightradar24.com',
                 'Referer': 'https://www.flightradar24.com'
             }
-            result = FlightMixin.session.get(url, headers=headers)
+            result = FlightMixin.session.get(url, headers=headers, timeout=600)
             if result.status_code != 200:
-                print("HTML code {0} - Retry in 10 seconds...".format(result.status_code))
-                time.sleep(10)
-                result = FlightMixin.session.get(url, headers=headers)
+                raise FlightRetrievalError(url, result.status_code)
         except:
             return None
         return result.content if result.status_code == 200 else None
@@ -158,3 +156,17 @@ class ProcessorMixin(object):
             return string.encode('unicode-escape').replace('\\xa0', ' ')
         else:
             return string.encode('unicode-escape').replace(b'\\xa0', b' ').decode('utf-8')
+
+
+class FlightRetrievalError(Exception):
+    """Exception raised for errors retrieving information from flightradar
+    Attributes:
+        query -- query which caused the error
+        message -- explanation of the error
+    """
+
+    def __init__(self, query, status_code):
+        self.query = query
+        self.status_code = status_code
+        self.message = 'Received status code {status_code} when getting {url}'.format(status_code=self.status_code, url=query)
+        super().__init__(self.message)
